@@ -64,7 +64,7 @@ def main(url):
     id_num = ''
     while id_num == '':
         try:
-            id_num = int(input("Please enter the ID number of the person you wish to display or type 0 to exit: "))
+            id_num = int(input("Enter the ID number to search for a person or type 0 to exit: "))
 
         except Exception as err:
             print(err, "\nID number must be an integer.")
