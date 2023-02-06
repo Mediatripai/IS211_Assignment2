@@ -11,15 +11,14 @@ def downloadData(url):
     return csvData
 
 def error_logger(count, id_num):
-    '''Creates a log file for improperly formatted data.'''
+    
     LOG_FILENAME = 'errors.log'
     logging.basicConfig(filename=LOG_FILENAME, level=logging.ERROR)
     assignment2 = logging.getLogger('assignment2')
     assignment2.error(f'Error processing line #{count} for ID #{id_num}.')
 
 def processData(file_content):
-    '''Processes .csv data and returns a dictionary in the format:
-    ID number: (name, birth date)'''
+    
     person_list = file_content.decode('ascii').split('\n')
     personData = {}
     count = 0
@@ -45,9 +44,7 @@ def processData(file_content):
     return personData
 
 def displayPerson(id, personData):
-    '''Searches a dictionary for an ID number.
-    If the ID is found, information about the person associated with that ID is printed.
-    If no ID is found, 'no user found with that id' is printed.'''
+  
     id_num = id
     personData = personData
 
@@ -63,8 +60,7 @@ def displayPerson(id, personData):
     main(args.url)
 
 def main(url):
-    '''Asks the user for an ID number and runs the displayPerson function.'''
-    print(f"Running main with URL = {url}...")
+    
     id_num = ''
     while id_num == '':
         try:
@@ -79,7 +75,7 @@ def main(url):
         displayPerson(id_num, processData(downloadData(url)))
 
 if __name__ == "__main__":
-    """Main entry point"""
+    
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", help="URL to the datafile", type=str, required=True)
     args = parser.parse_args()
