@@ -3,79 +3,84 @@ import urllib.request
 import logging
 import datetime
 
+logging.basicConfig(filename='errors.log', level=logging.ERROR,
+                    format='Error processing line #%(linenum)s for ID #%(personId)')
+logger = logging.getLogger('assignment2')
+
+
 def downloadData(url):
-   
-
+    
     with urllib.request.urlopen(url) as response:
-        csvData = response.read()
-    return csvData
+        response = response.read()
 
-def error_logger(count, id_num):
-    
-    LOG_FILENAME = 'errors.log'
-    logging.basicConfig(filename=LOG_FILENAME, level=logging.ERROR)
-    assignment2 = logging.getLogger('assignment2')
-    assignment2.error(f'Error processing line #{count} for ID #{id_num}.')
+         
+    return response
 
-def processData(file_content):
-    
-    person_list = file_content.decode('ascii').split('\n')
+
+def processData(fileContent):
     personData = {}
-    count = 0
+
+      
+    lines = fileContent.split("\n")
+
+    
+    lineNum = 0
     header = True
-    for person in person_list:
+
+    for line in lines:
+      
         if header:
             header = False
             continue
-        if len(person) == 0:
-            continue
-        line = person.split(',')
-        id_num = int(line[0])
-        name = line[1]
 
-        birth_date = line[2]
-        count += 1
+      
+        if len(line) == 0:
+            continue
+
+
+        elements = line.split(",")
+        personId = int(elements[0])
+        name = elements[1]
+        date_str = elements[2]
+
         try:
-            format = '%d/%m/%Y'
-            bd = datetime.datetime.strptime(birth_date, format)
-        except Exception as err:
-            error_logger(count, id_num)
-        personData[id_num] = (name, bd)
+            birthday = datetime.datetime.strptime(date_str, '%d/%m/%Y')
+            personData[personId] = (name, birthday)
+
+        except ValueError:
+            
+            logger.error("Error processing line #{} for ID #{}".format(lineNum, personId))
+
+        lineNum += 1
+
     return personData
 
-def displayPerson(id, personData):
-  
-    id_num = id
-    personData = personData
 
-    if id_num not in personData:
-        print("No user found with that id")
-        main(args.url)
+def displayPerson(personId, personData):
+    if personId in personData:
+        name, birthday = personData[personId]
+        print("Person #{} is {} with a birthday of {}".format(personId, name, birthday.strftime("%Y %m %d")))
+
     else:
-        values = personData[id_num]
-        name = values[0]
-        date = values[1].strftime('%d/%m/%Y')
+        print("No user found with that ID")
 
-    print(f"Person #{id_num} is {name} with a birthday of {date}.")
-    main(args.url)
 
 def main(url):
-    
-    id_num = ''
-    while id_num == '':
-        try:
-            id_num = int(input("Enter the ID number to search for a person or type 0 to exit: "))
+    print(f"Running main with URL = {url}...")
 
-        except Exception as err:
-            print(err, "\nID number must be an integer.")
-    if id_num <= 0:
-        print("Goodbye.")
+    fileContent = downloadData(url)
+    personData = processData(fileContent)
 
-    else:
-        displayPerson(id_num, processData(downloadData(url)))
+    while True:
+        user_input = int(input("Enter an ID number to search for person or type 0 to exit: "))
+
+        if user_input <= 0:
+            break
+
+        displayPerson(user_input, personData)
+
 
 if __name__ == "__main__":
-    
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", help="URL to the datafile", type=str, required=True)
     args = parser.parse_args()
