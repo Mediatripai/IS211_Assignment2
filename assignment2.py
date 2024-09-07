@@ -2,86 +2,71 @@ import argparse
 import urllib.request
 import logging
 import datetime
+import sys
 
-logging.basicConfig(filename='errors.log', level=logging.ERROR,
-                    format='Error processing line #%(linenum)s for ID #%(personId)')
-logger = logging.getLogger('assignment2')
-
+url = "https://s3.amazonaws.com/cuny-is211-spring2015/birthdays100.csv"
 
 def downloadData(url):
+    """Downloads the content from the given URL and returns it as a string."""
+    response = urllib.request.urlopen(url)
+    return response.read().decode('utf-8')
+
+def processData(file_content):
+    """Processes the CSV data and returns a dictionary mapping IDs to (name, birthday)."""
+    data_dict = {}
+    lines = file_content.splitlines()
     
-    with urllib.request.urlopen(url) as response:
-        response = response.read()
-
-         
-    return response
-
-
-def processData(fileContent):
-    personData = {}
-
-      
-    lines = fileContent.split("\n")
-
+    logger = logging.getLogger('assignment2')
     
-    lineNum = 0
-    header = True
-
-    for line in lines:
-      
-        if header:
-            header = False
-            continue
-
-      
-        if len(line) == 0:
-            continue
-
-
-        elements = line.split(",")
-        personId = int(elements[0])
-        name = elements[1]
-        date_str = elements[2]
-
+    for linenum, line in enumerate(lines[1:], 2):  # Start from 2 to account for the header
         try:
-            birthday = datetime.datetime.strptime(date_str, '%d/%m/%Y')
-            personData[personId] = (name, birthday)
+            person_id, name, birthday = line.split(',')
+            birthday = datetime.datetime.strptime(birthday.strip(), "%d/%m/%Y").date()
+            data_dict[int(person_id)] = (name.strip(), birthday)
+        except ValueError as e:
+            logger.error(f"Error processing line #{linenum} for ID #{person_id.strip()}")
+    
+    return data_dict
 
-        except ValueError:
-            
-            logger.error("Error processing line #{} for ID #{}".format(lineNum, personId))
-
-        lineNum += 1
-
-    return personData
-
-
-def displayPerson(personId, personData):
-    if personId in personData:
-        name, birthday = personData[personId]
-        print("Person #{} is {} with a birthday of {}".format(personId, name, birthday.strftime("%Y %m %d")))
-
+def displayPerson(person_id, personData):
+    """Displays the person's name and birthday or an error message if the ID is not found."""
+    if person_id in personData:
+        name, birthday = personData[person_id]
+        print(f"Person #{person_id} is {name} with a birthday of {birthday}")
     else:
-        print("No user found with that ID")
+        print("No user found with that id")
 
+def setup_logger():
+    """Sets up the logger to log errors to errors.log."""
+    logger = logging.getLogger('assignment2')
+    logger.setLevel(logging.ERROR)
+    handler = logging.FileHandler('errors.log')
+    handler.setLevel(logging.ERROR)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 def main(url):
+    """Main function to download, process data and handle user interaction."""
     print(f"Running main with URL = {url}...")
+    setup_logger()
 
-    fileContent = downloadData(url)
-    personData = processData(fileContent)
+    try:
+        csvData = downloadData(url)
+    except Exception as e:
+        print(f"Failed to download data: {e}")
+        sys.exit(1)
+
+    personData = processData(csvData)
 
     while True:
-        user_input = int(input("Enter an ID number to search for person or type 0 to exit: "))
-
-        if user_input <= 0:
-            break
-
-        displayPerson(user_input, personData)
-
+        try:
+            person_id = int(input("Enter an ID to look up (or 0 or negative to exit): "))
+            if person_id <= 0:
+                break
+            displayPerson(person_id, personData)
+        except ValueError:
+            print("Invalid input. Please enter a valid number.")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--url", help="URL to the datafile", type=str, required=True)
-    args = parser.parse_args()
-    main(args.url)
+    main(url)
